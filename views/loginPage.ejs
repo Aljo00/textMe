@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TextMe - Login/Signup</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/login.css" />
+    <link rel="icon" type="image/jpg" href="/assets/logo.jpg" />
+  </head>
+  <body>
+    <div class="theme-toggle">
+      <button id="themeToggle">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+    <div class="container">
+      <div class="tabs-container">
+        <div class="tabs">
+          <button class="tab active" data-tab="login">Login</button>
+          <button class="tab" data-tab="signup">Sign Up</button>
+        </div>
+      </div>
+      <div class="form-container">
+        <form id="loginForm" class="form active">
+          <h2>Welcome Back!</h2>
+          <div class="input-group">
+            <input type="email" required />
+            <label>Email</label>
+          </div>
+          <div class="input-group">
+            <input type="password" id="loginPassword" required />
+            <label>Password</label>
+            <i class="fas fa-eye-slash toggle-password"></i>
+          </div>
+          <button type="submit" class="submit-btn">Login</button>
+          <div class="social-login">
+            <p>Or continue with</p>
+            <div class="social-buttons">
+              <button
+                type="button"
+                class="social-btn google"
+                aria-label="Sign in with Google"
+              >
+                <i class="fab fa-google"></i>
+              </button>
+              <button
+                type="button"
+                class="social-btn github"
+                aria-label="Sign in with GitHub"
+              >
+                <i class="fab fa-github"></i>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <form id="signupForm" class="form">
+          <h2>Create Account</h2>
+          <div class="input-group">
+            <input type="text" required />
+            <label>Full Name</label>
+          </div>
+          <div class="input-group">
+            <input type="email" required />
+            <label>Email</label>
+          </div>
+          <div class="input-group">
+            <input type="tel" required />
+            <label>Phone Number</label>
+          </div>
+          <div class="input-group">
+            <input type="date" required />
+            <label>Date of Birth</label>
+          </div>
+          <div class="input-group">
+            <input type="password" id="signupPassword" required />
+            <label>Password</label>
+            <i class="fas fa-eye-slash toggle-password"></i>
+          </div>
+          <div class="input-group">
+            <input type="password" id="confirmPassword" required />
+            <label>Confirm Password</label>
+            <i class="fas fa-eye-slash toggle-password"></i>
+          </div>
+          <button type="submit" class="submit-btn">Sign Up</button>
+          <div class="social-login">
+            <p>Or sign up with</p>
+            <div class="social-buttons">
+              <button
+                type="button"
+                class="social-btn google"
+                aria-label="Sign in with Google"
+              >
+                <i class="fab fa-google"></i>
+              </button>
+              <button
+                type="button"
+                class="social-btn github"
+                aria-label="Sign in with GitHub"
+              >
+                <i class="fab fa-github"></i>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="/scripts/login.js"></script>
+  </body>
+</html>
