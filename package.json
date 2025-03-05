@@ -1,0 +1,37 @@
+{
+  "name": "textme",
+  "version": "1.0.0",
+  "description": "This is a chat application enables real time chating each other. JWT auth and also may be it enables video and audio calls",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aljo00/TextMe.git"
+  },
+  "author": "Aljo Joju",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Aljo00/TextMe/issues"
+  },
+  "homepage": "https://github.com/Aljo00/TextMe#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.1",
+    "multer": "^1.4.5-lts.1",
+    "sanitize-html": "^2.14.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
