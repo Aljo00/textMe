@@ -58,31 +58,41 @@
           </div>
         </form>
 
-        <form id="signupForm" class="form">
+        <form id="signupForm" class="form" action="/signup" method="POST">
           <h2>Create Account</h2>
           <div class="input-group">
-            <input type="text" required />
+            <input type="text" name="fullName" required />
             <label>Full Name</label>
           </div>
           <div class="input-group">
-            <input type="email" required />
+            <input type="email" name="email" required />
             <label>Email</label>
           </div>
           <div class="input-group">
-            <input type="tel" required />
+            <input type="tel" name="phoneNumber" required />
             <label>Phone Number</label>
           </div>
           <div class="input-group">
-            <input type="date" required />
+            <input type="date" name="dateOfBirth" required />
             <label>Date of Birth</label>
           </div>
           <div class="input-group">
-            <input type="password" id="signupPassword" required />
+            <input
+              type="password"
+              id="signupPassword"
+              name="password"
+              required
+            />
             <label>Password</label>
             <i class="fas fa-eye-slash toggle-password"></i>
           </div>
           <div class="input-group">
-            <input type="password" id="confirmPassword" required />
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              required
+            />
             <label>Confirm Password</label>
             <i class="fas fa-eye-slash toggle-password"></i>
           </div>

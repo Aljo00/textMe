@@ -1,8 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Add animated background elements
   const bgLayer2 = document.querySelector(".bg-layer-2");
-  const symbols =
-    "";
+  const symbols = "";
   const elements = symbols.split(" ");
 
   function updateBackground() {
@@ -86,15 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Form submission
   const loginForm = document.getElementById("loginForm");
-  const signupForm = document.getElementById("signupForm");
 
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     // Add your login logic here
   });
 
-  signupForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    // Add your signup logic here
-  });
+  // Remove signup form handler as it will submit directly to /signup
 });
