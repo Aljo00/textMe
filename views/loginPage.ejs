@@ -61,40 +61,48 @@
         <form id="signupForm" class="form" action="/signup" method="POST">
           <h2>Create Account</h2>
           <div class="input-group">
-            <input type="text" name="fullName" required />
+            <input type="text" name="fullName" data-validate="name" required />
             <label>Full Name</label>
+            <span class="error-message"></span>
           </div>
           <div class="input-group">
-            <input type="email" name="email" required />
+            <input type="email" name="email" data-validate="email" required />
             <label>Email</label>
+            <span class="error-message"></span>
           </div>
           <div class="input-group">
-            <input type="tel" name="phoneNumber" required />
+            <input type="tel" name="phone" data-validate="phone" required />
             <label>Phone Number</label>
+            <span class="error-message"></span>
           </div>
           <div class="input-group">
-            <input type="date" name="dateOfBirth" required />
+            <input type="date" name="dob" data-validate="dob" required />
             <label>Date of Birth</label>
+            <span class="error-message"></span>
           </div>
           <div class="input-group">
             <input
               type="password"
               id="signupPassword"
               name="password"
+              data-validate="password"
               required
             />
             <label>Password</label>
             <i class="fas fa-eye-slash toggle-password"></i>
+            <span class="error-message"></span>
           </div>
           <div class="input-group">
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              data-validate="confirmPassword"
               required
             />
             <label>Confirm Password</label>
             <i class="fas fa-eye-slash toggle-password"></i>
+            <span class="error-message"></span>
           </div>
           <button type="submit" class="submit-btn">Sign Up</button>
           <div class="social-login">

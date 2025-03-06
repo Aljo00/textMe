@@ -32,6 +32,9 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    dob: {
+      type: Date,
+    },
     friends: [
       {
         type: mongoose.Schema.Types.ObjectId,

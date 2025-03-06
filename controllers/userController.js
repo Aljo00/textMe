@@ -42,6 +42,7 @@ const userController = {
     signup: async (req, res) => {
         try {
             console.log('Signup request:', req.body);
+            const{ name, email, password, phone, dob } = req.body;
             res.status(201).json({ message: 'Signup successful' });
         } catch (error) {
             console.error('Signup error:', error);

@@ -254,7 +254,8 @@ h2 {
 
 .input-group {
   position: relative;
-  margin-bottom: 25px;
+  margin-bottom: 35px; /* Increased to accommodate error messages */
+  width: 100%;
 }
 
 .input-group input {
@@ -267,19 +268,21 @@ h2 {
   transition: all 0.3s;
   background: var(--input-bg);
   color: var(--text-color);
+  height: 50px; /* Fixed height for consistency */
 }
 
 .input-group label {
   position: absolute;
   left: 15px;
-  top: 15px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #999;
   pointer-events: none;
   transition: all 0.3s;
-  background: var(--label-bg-light);
   padding: 0 5px;
   font-size: 16px;
-  color: var(--text-color);
+  background: var(--label-bg-light);
+  z-index: 1;
 }
 
 .input-group input:focus,
@@ -288,9 +291,11 @@ h2 {
 }
 
 .input-group input:focus + label,
-.input-group input:valid + label {
-  top: -10px;
-  left: 10px;
+.input-group input:valid + label,
+.input-group input[type="date"] + label,
+.input-group input[type="email"]:valid + label {
+  top: 0;
+  transform: translateY(-50%);
   font-size: 14px;
   background: var(--label-bg-light);
   color: var(--primary-color);
@@ -345,7 +350,7 @@ h2 {
 #signupForm {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 10px; /* Reduced from 20px since input-group margin handles spacing */
   max-height: calc(90vh - 140px);
   overflow-y: auto;
   padding-right: 10px;
@@ -743,4 +748,113 @@ social-login p::before {
 .bg-layer-2,
 .bg-layer-3 {
   display: none;
+}
+
+.input-group {
+  position: relative;
+  margin-bottom: 35px; /* Increased to accommodate error messages */
+  width: 100%;
+}
+
+.error-message {
+  position: absolute;
+  bottom: -25px; /* Position below input */
+  left: 12px; /* Align with input padding */
+  font-size: 12px;
+  background: transparent;
+  color: #ff3e3e;
+  transition: all 0.3s ease;
+  transform: translateY(-5px);
+  opacity: 0;
+  padding: 4px 0;
+  border-radius: 4px;
+}
+
+.error-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.input-group.error {
+  margin-bottom: 45px; /* Extra space when error is shown */
+}
+
+.input-group.error input {
+  border-color: #ff3e3e;
+  animation: shake 0.5s ease-in-out;
+}
+
+.input-group.success input {
+  border-color: #00c853;
+}
+
+.input-group.error label {
+  color: #ff3e3e;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 25px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.success {
+  background: linear-gradient(45deg, #00c853, #69f0ae);
+}
+
+.toast.error {
+  background: linear-gradient(45deg, #ff3e3e, #ff7676);
+}
+
+/* Adjust spacing for password fields with toggle icon */
+.input-group:has(.toggle-password) .error-message {
+  bottom: -25px;
+  left: 15px;
+}
+
+/* Fix date input specific styling */
+.input-group input[type="date"] {
+  color: transparent;
+}
+
+.input-group input[type="date"]:focus,
+.input-group input[type="date"]:valid {
+  color: var(--text-color);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .input-group label {
+  background: var(--label-bg-dark);
+}
+
+[data-theme="dark"] .input-group input:focus + label,
+[data-theme="dark"] .input-group input:valid + label {
+  background: var(--label-bg-dark);
 }
