@@ -224,6 +224,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // Show loading toast
+    const loadingToast = showToast(
+      "Sending OTP, please wait...",
+      "info",
+      false
+    );
+    const submitBtn = signupForm.querySelector(".submit-btn");
+    submitBtn.disabled = true;
+
     try {
       const formData = new FormData(signupForm);
       const data = Object.fromEntries(formData);
@@ -238,12 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const responseData = await response.json();
 
+      // Remove loading toast
+      if (loadingToast) loadingToast.remove();
+
       if (response.ok) {
         showToast(
           responseData.message || "Account created successfully!",
           "success"
         );
-        // Add slight delay before redirect
         setTimeout(() => {
           window.location.href = responseData.redirect || "/verify-otp";
         }, 1000);
@@ -254,26 +265,36 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
     } catch (error) {
+      // Remove loading toast
+      if (loadingToast) loadingToast.remove();
       console.error("Signup error:", error);
       showToast("An error occurred. Please try again.", "error");
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 
-  function showToast(message, type) {
+  function showToast(message, type, autoRemove = true) {
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
     toast.textContent = message;
 
-    // Remove existing toasts
-    document.querySelectorAll(".toast").forEach((t) => t.remove());
+    // Only remove existing toasts if this is not a loading message
+    if (autoRemove) {
+      document.querySelectorAll(".toast").forEach((t) => t.remove());
+    }
 
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add("show"));
 
-    setTimeout(() => {
-      toast.classList.remove("show");
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    if (autoRemove) {
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    return toast;
   }
 });
 

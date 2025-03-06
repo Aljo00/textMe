@@ -833,6 +833,11 @@ social-login p::before {
   background: linear-gradient(45deg, #ff3e3e, #ff7676);
 }
 
+.toast.info {
+  background-color: #2196f3;
+  color: white;
+}
+
 /* Adjust spacing for password fields with toggle icon */
 .input-group:has(.toggle-password) .error-message {
   bottom: -25px;

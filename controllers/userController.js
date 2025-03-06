@@ -150,7 +150,7 @@ const userController = {
       }
 
       const newOtp = userController.generateOtp();
-      const emailSent = await userController.emailVerification(
+      const emailSent = await sendmail(
         req.session.signupOTP.email,
         newOtp
       );
