@@ -27,6 +27,9 @@
       <div class="form-container">
         <form id="loginForm" class="form active">
           <h2>Welcome Back!</h2>
+          <% if (locals.loginError) { %>
+          <div class="form-error-message"><%= loginError %></div>
+          <% } %>
           <div class="input-group">
             <input type="email" required />
             <label>Email</label>
@@ -60,6 +63,9 @@
 
         <form id="signupForm" class="form" action="/signup" method="POST">
           <h2>Create Account</h2>
+          <% if (locals.signupError) { %>
+          <div class="form-error-message"><%= signupError %></div>
+          <% } %>
           <div class="input-group">
             <input type="text" name="fullName" data-validate="name" required />
             <label>Full Name</label>

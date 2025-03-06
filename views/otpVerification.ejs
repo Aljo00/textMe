@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Your Account - TextMe</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/otp.css" />
+    <link rel="icon" type="image/jpg" href="/assets/logo.jpg" />
+  </head>
+  <body>
+    <div class="theme-toggle">
+      <button id="themeToggle">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+    <div class="container">
+      <div class="otp-card">
+        <img src="/assets/logo.jpg" alt="TextMe Logo" class="logo" />
+        <h1>Verify Your Account</h1>
+        <p class="subtitle">We've sent a verification code to your email</p>
+
+        <form id="otpForm" class="otp-form">
+          <div class="otp-input-group">
+            <input type="text" maxlength="1" class="otp-input" autofocus />
+            <input type="text" maxlength="1" class="otp-input" />
+            <input type="text" maxlength="1" class="otp-input" />
+            <input type="text" maxlength="1" class="otp-input" />
+            <input type="text" maxlength="1" class="otp-input" />
+            <input type="text" maxlength="1" class="otp-input" />
+          </div>
+          <div class="timer">
+            Time remaining: <span id="countdown">02:00</span>
+          </div>
+          <button type="submit" class="verify-btn">Verify Account</button>
+        </form>
+
+        <div class="resend-container">
+          <p>Didn't receive the code?</p>
+          <button id="resendBtn" class="resend-btn" disabled>
+            Resend Code <span id="resendTimer"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const themeToggle = document.getElementById("themeToggle");
+        const icon = themeToggle.querySelector("i");
+        const savedTheme = localStorage.getItem("theme") || "light";
+
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        updateThemeIcon(savedTheme === "dark");
+
+        themeToggle.addEventListener("click", () => {
+          const currentTheme =
+            document.documentElement.getAttribute("data-theme");
+          const newTheme = currentTheme === "dark" ? "light" : "dark";
+
+          document.documentElement.setAttribute("data-theme", newTheme);
+          localStorage.setItem("theme", newTheme);
+          updateThemeIcon(newTheme === "dark");
+        });
+
+        function updateThemeIcon(isDark) {
+          if (isDark) {
+            icon.classList.remove("fa-moon");
+            icon.classList.add("fa-sun");
+          } else {
+            icon.classList.remove("fa-sun");
+            icon.classList.add("fa-moon");
+          }
+        }
+      });
+    </script>
+    <script src="/scripts/otp.js"></script>
+  </body>
+</html>

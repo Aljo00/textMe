@@ -858,3 +858,20 @@ social-login p::before {
 [data-theme="dark"] .input-group input:valid + label {
   background: var(--label-bg-dark);
 }
+
+.form-error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 0.9em;
+  border: 1px solid #ef9a9a;
+}
+
+[data-theme="dark"] .form-error-message {
+  background-color: #451e1e;
+  color: #ff8a8a;
+  border-color: #642424;
+}

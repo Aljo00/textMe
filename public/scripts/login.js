@@ -226,23 +226,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const formData = new FormData(signupForm);
+      const data = Object.fromEntries(formData);
+
       const response = await fetch("/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(Object.fromEntries(formData)),
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (response.ok) {
-        showToast("Signup successful!", "success");
-        window.location.href = "/dashboard";
+        showToast(
+          responseData.message || "Account created successfully!",
+          "success"
+        );
+        // Add slight delay before redirect
+        setTimeout(() => {
+          window.location.href = responseData.redirect || "/verify-otp";
+        }, 1000);
       } else {
-        showToast(data.message || "Signup failed", "error");
+        showToast(
+          responseData.message || "Signup failed. Please try again.",
+          "error"
+        );
       }
     } catch (error) {
+      console.error("Signup error:", error);
       showToast("An error occurred. Please try again.", "error");
     }
   });

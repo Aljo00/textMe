@@ -9,15 +9,16 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       unique: true,
-      sparse: true,
+      required: true,
     },
     phone: {
       type: String,
       unique: true,
-      sparse: true,
+      required: true,
     },
     password: {
       type: String,
+      required: true,
     },
     profilePic: {
       type: String,
@@ -34,6 +35,7 @@ const userSchema = new mongoose.Schema(
     },
     dob: {
       type: Date,
+      required: true,
     },
     friends: [
       {
@@ -47,6 +49,14 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
