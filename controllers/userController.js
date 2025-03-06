@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const env = require("dotenv").config();
 const mongoose = require("mongoose");
 const sendmail = require("../helpers/sendEmail");
+const { generateTokens } = require("../config/JWT");
 
 const userController = {
   // Render login page
@@ -15,28 +16,60 @@ const userController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
-
       const user = await User.findOne({ email });
-      
-      if (!user) {
+
+      if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
+      const { accessToken, refreshToken } = generateTokens(user);
 
-      req.session.user = {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      };
+      // Set access token in cookie
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
+      });
 
-      res.status(200).json({ message: "Login successful" });
+      // Set refresh token in cookie
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        redirect: "/dashboard",
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  },
+
+  refreshToken: async (req, res) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ message: "No refresh token" });
+      }
+
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { accessToken } = generateTokens(user);
+      res.json({ accessToken });
+    } catch (error) {
+      res.clearCookie("refreshToken");
+      return res.status(401).json({ message: "Invalid refresh token" });
     }
   },
 
@@ -150,10 +183,7 @@ const userController = {
       }
 
       const newOtp = userController.generateOtp();
-      const emailSent = await sendmail(
-        req.session.signupOTP.email,
-        newOtp
-      );
+      const emailSent = await sendmail(req.session.signupOTP.email, newOtp);
 
       if (!emailSent) {
         return res.status(500).json({ message: "Error sending OTP" });
@@ -173,20 +203,39 @@ const userController = {
   },
 
   logout: (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Logout error:", err);
-        return res.status(500).json({ message: "Error logging out" });
-      }
-      res.redirect("/login");
+    // Clear JWT cookies
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    // Clear session if exists
+    if (req.session) {
+      req.session.destroy();
+    }
+
+    // Send success message with redirect
+    req.session = null; // Ensure session is cleared
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+      redirect: "/login",
     });
   },
 
-  getDashboard: (req, res) => {
-    if (!req.session.user) {
-      return res.redirect("/login");
+  getDashboard: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select("-password");
+      if (!user) {
+        res.clearCookie("accessToken");
+        res.clearCookie("refreshToken");
+        return res.redirect("/login");
+      }
+      res.render("dashboard", { user });
+    } catch (error) {
+      console.error(error);
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+      res.redirect("/login");
     }
-    res.render("dashboard", { user: req.session.user });
   },
 };
 

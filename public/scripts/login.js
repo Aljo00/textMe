@@ -143,15 +143,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorElement = input.parentElement.querySelector(".error-message");
     const validation = validations[validationType];
 
-    if (validation) {
-      const isValid = validation.test(input.value);
-      errorElement.textContent = validation.message;
+    if (!validation) return true;
+    if (!errorElement) {
+      console.warn(`Error message element not found for ${input.name}`);
+      return true;
+    }
+
+    const isValid = validation.test(input.value);
+    if (errorElement) {
+      errorElement.textContent = isValid ? "" : validation.message;
       errorElement.classList.toggle("show", !isValid);
       input.parentElement.classList.toggle("error", !isValid);
       input.parentElement.classList.toggle("success", isValid);
-      return isValid;
     }
-    return true;
+    return isValid;
   }
 
   // Login form validation
@@ -185,17 +190,21 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(Object.fromEntries(formData)),
+        credentials: "include", // Important for cookies
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        showToast("Login successful!", "success");
-        window.location.href = "/dashboard";
+      if (response.ok && data.success) {
+        showToast(data.message || "Login successful!", "success");
+        setTimeout(() => {
+          window.location.href = data.redirect || "/dashboard";
+        }, 1000);
       } else {
         showToast(data.message || "Login failed", "error");
       }
     } catch (error) {
+      console.error("Error:", error);
       showToast("An error occurred. Please try again.", "error");
     }
   });
@@ -298,37 +307,74 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
+// Add this after your existing event listeners
+document.addEventListener("DOMContentLoaded", () => {
+  // Check if there's a logout button
+  const logoutBtn = document.querySelector(".logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const response = await fetch("/logout", {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(data.message, "success");
+          setTimeout(() => {
+            window.location.href = data.redirect;
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Logout error:", error);
+        showToast("Error during logout", "error");
+      }
+    });
+  }
+});
+
+// Update the login form submission toast handling
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const formData = new FormData(e.target);
-  const data = {
-    email: formData.get("email"),
-    password: formData.get("password"),
-  };
+  let isValid = true;
+  loginInputs.forEach((input) => {
+    if (!validateField(input, true)) {
+      isValid = false;
+    }
+  });
+
+  if (!isValid) {
+    showToast("Please fix the errors before submitting", "error");
+    return;
+  }
 
   try {
+    const formData = new FormData(loginForm);
     const response = await fetch("/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(Object.fromEntries(formData)),
+      credentials: "include",
     });
 
-    const result = await response.json();
+    const data = await response.json();
 
-    if (response.ok) {
-      window.location.href = "/dashboard";
+    if (response.ok && data.success) {
+      AuthService.setAccessToken(data.accessToken);
+      showToast(data.message || "Login successful!", "success");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1000);
     } else {
-      const errorDiv = document.querySelector(".error-message");
-      errorDiv.textContent = result.message;
-      errorDiv.style.display = "block";
+      showToast(data.message || "Login failed", "error");
     }
   } catch (error) {
     console.error("Error:", error);
-    const errorDiv = document.querySelector(".error-message");
-    errorDiv.textContent = "An error occurred. Please try again.";
-    errorDiv.style.display = "block";
+    showToast("An error occurred. Please try again.", "error");
   }
 });

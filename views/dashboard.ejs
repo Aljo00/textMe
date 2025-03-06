@@ -135,6 +135,30 @@
       [data-theme="dark"] .stat-label {
         color: #a8b1bb;
       }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: #7269ef;
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -147,7 +171,7 @@
       <div class="welcome-card">
         <h1 class="welcome-text">Welcome back, <%= user.name %>!</h1>
         <p>You're successfully verified and logged in.</p>
-        <a href="/logout"><button class="logout-btn">Logout</button></a>
+        <button class="logout-btn">Logout</button>
       </div>
 
       <div class="stats-grid">
@@ -200,6 +224,34 @@
           }
         }
       });
+
+      // Add logout functionality
+      document
+        .querySelector(".logout-btn")
+        .addEventListener("click", async () => {
+          try {
+            const response = await fetch("/logout", {
+              method: "GET",
+              credentials: "include",
+            });
+            const data = await response.json();
+
+            if (data.success) {
+              // Create and show toast message
+              const toast = document.createElement("div");
+              toast.className = "toast success";
+              toast.textContent = data.message;
+              document.body.appendChild(toast);
+
+              // Redirect after showing message
+              setTimeout(() => {
+                window.location.href = data.redirect;
+              }, 1000);
+            }
+          } catch (error) {
+            console.error("Logout error:", error);
+          }
+        });
     </script>
   </body>
 </html>

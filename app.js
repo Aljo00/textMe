@@ -12,6 +12,9 @@ const user_route = require("./routes/userRoutes");
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+
 // Add session middleware
 app.use(
   session({
@@ -24,6 +27,11 @@ app.use(
     },
   })
 );
+
+app.use((req, res, next) => {
+  res.header("Cache-Control", "no-store");
+  next();
+});
 
 //setting the view engine and public folder
 app.set("view engine", "ejs");
