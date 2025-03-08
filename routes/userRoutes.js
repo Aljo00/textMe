@@ -16,4 +16,27 @@ router.post("/resend-otp", guestMiddleware, userController.resendOtp);
 router.get("/dashboard", authMiddleware, userController.getDashboard);
 router.get("/logout", authMiddleware, userController.logout);
 
+// Protected API routes
+router.get("/api/friends", authMiddleware, userController.getFriends);
+router.get(
+  "/api/friend-requests",
+  authMiddleware,
+  userController.getFriendRequests
+);
+router.get("/api/search-users", authMiddleware, userController.searchUsers);
+router.get("/api/call-history", authMiddleware, userController.getCallHistory);
+router.post(
+  "/api/send-friend-request",
+  authMiddleware,
+  userController.sendFriendRequest
+);
+router.post(
+  "/api/handle-friend-request",
+  authMiddleware,
+  userController.handleFriendRequest
+);
+
+// Add new route for user details
+router.get("/api/user/:userId", authMiddleware, userController.getUserDetails);
+
 module.exports = router;

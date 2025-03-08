@@ -229,12 +229,168 @@ const userController = {
         res.clearCookie("refreshToken");
         return res.redirect("/login");
       }
+
+      console.log("User:", user);
       res.render("dashboard", { user });
     } catch (error) {
       console.error(error);
       res.clearCookie("accessToken");
       res.clearCookie("refreshToken");
       res.redirect("/login");
+    }
+  },
+
+  getFriends: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).populate(
+        "friends",
+        "name profilePic isOnline lastSeen"
+      );
+      res.json({ friends: user.friends });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching friends" });
+    }
+  },
+
+  getFriendRequests: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).populate(
+        "pendingRequests",
+        "name profilePic"
+      );
+      res.json({ requests: user.pendingRequests });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching friend requests" });
+    }
+  },
+
+  searchUsers: async (req, res) => {
+    try {
+      const query = req.query.q;
+      const currentUser = await User.findById(req.user.id);
+
+      // Get arrays of IDs to exclude
+      const excludeIds = [
+        currentUser._id,
+        ...(currentUser.friends || []),
+        ...(currentUser.pendingRequests || []),
+      ];
+
+      let searchQuery = {
+        _id: { $nin: excludeIds },
+      };
+
+      // Add name filter only if query exists and is not empty
+      if (query && query.trim().length > 0) {
+        searchQuery.name = { $regex: query, $options: "i" };
+      }
+
+      const users = await User.find(searchQuery)
+        .select("name email profilePic isOnline")
+        .limit(20);
+
+      res.json({ users });
+    } catch (error) {
+      console.error("Search error:", error);
+      res.status(500).json({
+        message: "Error searching users",
+        error: error.message,
+      });
+    }
+  },
+
+  sendFriendRequest: async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const targetUser = await User.findById(userId);
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if request already exists
+      if (targetUser.pendingRequests.includes(req.user.id)) {
+        return res.status(400).json({ message: "Friend request already sent" });
+      }
+
+      // Add to pending requests
+      targetUser.pendingRequests.push(req.user.id);
+      await targetUser.save();
+
+      res.json({ success: true, message: "Friend request sent successfully" });
+    } catch (error) {
+      console.error("Send friend request error:", error);
+      res.status(500).json({ message: "Error sending friend request" });
+    }
+  },
+
+  handleFriendRequest: async (req, res) => {
+    try {
+      const { requestId, action } = req.body;
+      const currentUser = await User.findById(req.user.id);
+
+      if (!currentUser.pendingRequests.includes(requestId)) {
+        return res.status(400).json({ message: "No such friend request" });
+      }
+
+      // Remove from pending requests
+      currentUser.pendingRequests = currentUser.pendingRequests.filter(
+        (id) => id.toString() !== requestId
+      );
+
+      if (action === "accept") {
+        // Add to friends list for both users
+        currentUser.friends.push(requestId);
+        const otherUser = await User.findById(requestId);
+        otherUser.friends.push(currentUser._id);
+        await otherUser.save();
+      }
+
+      await currentUser.save();
+      res.json({ success: true, message: `Friend request ${action}ed` });
+    } catch (error) {
+      console.error("Handle friend request error:", error);
+      res.status(500).json({ message: "Error handling friend request" });
+    }
+  },
+
+  getCallHistory: async (req, res) => {
+    // Demo data for call history
+    const demoHistory = [
+      {
+        id: 1,
+        name: "John Doe",
+        type: "outgoing",
+        duration: "5:23",
+        timestamp: new Date(Date.now() - 3600000),
+      },
+      {
+        id: 2,
+        name: "Jane Smith",
+        type: "incoming",
+        duration: "2:45",
+        timestamp: new Date(Date.now() - 7200000),
+      },
+    ];
+    res.json({ history: demoHistory });
+  },
+
+  // Add new controller method for getting user details
+  getUserDetails: async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const user = await User.findById(userId).select(
+        "name email phone profilePic isOnline lastSeen createdAt"
+      );
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      res.status(500).json({ message: "Error fetching user details" });
     }
   },
 };
