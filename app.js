@@ -3,6 +3,9 @@ const app = express();
 const mongoose = require("mongoose");
 const User = require("./models/userSchema");
 const session = require("express-session"); // Add this line
+const http = require("http");
+const server = http.createServer(app);
+const socketService = require("./services/socketService");
 
 //requiring .env file to the server.
 const env = require("dotenv").config();
@@ -56,8 +59,11 @@ checkDatabase();
 
 app.use("/", user_route);
 
+// Initialize socket.io
+socketService.init(server);
+
 //Starting the server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log("Server is Running");
 });

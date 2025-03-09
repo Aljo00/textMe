@@ -1,4 +1,47 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Socket.IO
+  const socket = io();
+
+  // Connect with user ID
+  if (window.currentUserId) {
+    socket.emit("user_connected", window.currentUserId);
+  }
+
+  // Listen for user status changes
+  socket.on("user_status_change", ({ userId, isOnline, lastSeen }) => {
+    updateUserStatusInUI(userId, isOnline, lastSeen);
+  });
+
+  function updateUserStatusInUI(userId, isOnline, lastSeen) {
+    // Update status indicators
+    const statusIndicators =
+      document.querySelectorAll(`[data-user-id="${userId}"] .status-indicator, 
+                                                      [data-user-id="${userId}"] .user-details-status-indicator`);
+    statusIndicators.forEach((indicator) => {
+      if (isOnline) {
+        indicator.classList.add("online");
+        indicator.style.display = "block";
+      } else {
+        indicator.classList.remove("online");
+        indicator.style.display = "none";
+      }
+    });
+
+    // Update in user details if open
+    const userDetails = document.querySelector(
+      `.user-details[data-user-id="${userId}"]`
+    );
+    if (userDetails) {
+      const statusDiv = userDetails.querySelector(".user-status");
+      if (statusDiv) {
+        statusDiv.innerHTML = isOnline
+          ? '<span class="status online">Online</span>'
+          : "";
+      }
+    }
+  }
+
+  // Keep theme handling in localStorage
   const themeToggle = document.getElementById("themeToggle");
   const icon = themeToggle.querySelector("i");
   const savedTheme = localStorage.getItem("theme") || "light";
@@ -49,53 +92,69 @@ document.addEventListener("DOMContentLoaded", () => {
   const listContent = document.querySelector(".list-content");
   const listHeader = document.querySelector(".list-header h3");
 
-  iconNavItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      // Remove active class from all items
-      iconNavItems.forEach((i) => i.classList.remove("active"));
-      // Add active class to clicked item
-      item.classList.add("active");
+  // Get active section from sessionStorage
+  const activeSection = sessionStorage.getItem("activeSection") || "Friends";
 
-      const section = item.getAttribute("data-tooltip");
+  // Set initial active section and load content
+  setActiveSection(activeSection);
+
+  // Function to set active section and load content
+  function setActiveSection(section) {
+    // Remove active class from all items
+    iconNavItems.forEach((item) => item.classList.remove("active"));
+
+    // Find and activate the correct icon
+    const activeIcon = Array.from(iconNavItems).find(
+      (item) => item.getAttribute("data-tooltip") === section
+    );
+
+    if (activeIcon) {
+      activeIcon.classList.add("active");
       if (listHeader) {
         listHeader.textContent = section;
       }
 
-      // Fetch appropriate content based on section
-      switch (section) {
-        case "Friends":
-          fetchAndRenderContent("/api/friends");
-          break;
-        case "Friend Requests":
-          fetchAndRenderContent("/api/friend-requests");
-          break;
-        case "Search Users":
-          fetchAndRenderContent("/api/search-users");
-          break;
-        case "Call History":
-          fetchAndRenderContent("/api/call-history");
-          break;
-      }
+      // Convert section name to API endpoint
+      const endpoint = `/api/${section.toLowerCase().replace(/\s+/g, "-")}`;
+      fetchAndRenderContent(endpoint);
+    }
+  }
+
+  // Update click handlers for icon navigation
+  iconNavItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const section = item.getAttribute("data-tooltip");
+      sessionStorage.setItem("activeSection", section);
+      // Clear user details when switching tabs
+      sessionStorage.removeItem("currentUserDetails");
+      // Reset interaction column to default state
+      const interactionColumn = document.querySelector(".interaction-column");
+      interactionColumn.innerHTML = `
+        <div class="placeholder-message">
+          <i class="fas fa-comments"></i>
+          <p>Select a chat to start messaging</p>
+        </div>
+      `;
+      setActiveSection(section);
     });
   });
 
   // Move showSearch function to global scope
   window.showSearch = () => {
-    const searchIcon = document.querySelector('[data-tooltip="Search Users"]');
-    if (searchIcon) {
-      searchIcon.click();
-    }
+    const section = "Search Users";
+    sessionStorage.setItem("activeSection", section);
+    // Clear user details when going to search
+    sessionStorage.removeItem("currentUserDetails");
+    // Reset interaction column
+    const interactionColumn = document.querySelector(".interaction-column");
+    interactionColumn.innerHTML = `
+      <div class="placeholder-message">
+        <i class="fas fa-comments"></i>
+        <p>Select a chat to start messaging</p>
+      </div>
+    `;
+    setActiveSection(section);
   };
-
-  // Initial load - show friends by default
-  const defaultSection = document.querySelector(".icon-nav-item.active");
-  if (defaultSection) {
-    const section = defaultSection.getAttribute("data-tooltip");
-    if (listHeader) {
-      listHeader.textContent = section;
-    }
-    fetchAndRenderContent("/api/friends");
-  }
 
   async function fetchAndRenderContent(endpoint) {
     try {
@@ -118,22 +177,20 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             data.friends.forEach((friend) => {
               html += `
-                <div class="user-item">
-                  <img src="${friend.profilePic}" alt="${
+                <div class="user-item" data-user-id="${friend._id}">
+                  <div class="profile-container">
+                    <img src="${friend.profilePic}" alt="${
                 friend.name
               }" class="user-avatar">
+                    <div class="status-indicator ${
+                      friend.isOnline ? "online" : ""
+                    }" 
+                         style="display: ${
+                           friend.isOnline ? "block" : "none"
+                         }"></div>
+                  </div>
                   <div class="user-info">
                     <h4>${friend.name}</h4>
-                    <span class="status ${
-                      friend.isOnline ? "online" : "offline"
-                    }">
-                      ${
-                        friend.isOnline
-                          ? "Online"
-                          : "Last seen: " +
-                            new Date(friend.lastSeen).toLocaleTimeString()
-                      }
-                    </span>
                   </div>
                 </div>
               `;
@@ -281,10 +338,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const html = data.users
         .map(
           (user) => `
-        <div class="user-item" onclick="showUserDetails('${user._id}')">
-          <img src="${user.profilePic || "/assets/default-avatar.png"}" alt="${
-            user.name
-          }" class="user-avatar">
+        <div class="user-item" onclick="showUserDetails('${
+          user._id
+        }')" data-user-id="${user._id}">
+          <div class="profile-container">
+            <img src="${
+              user.profilePic || "/assets/default-avatar.png"
+            }" alt="${user.name}" class="user-avatar">
+            <div class="status-indicator ${user.isOnline ? "online" : ""}" 
+                 style="display: ${user.isOnline ? "block" : "none"}"></div>
+          </div>
           <div class="user-info">
             <h4>${user.name}</h4>
           </div>
@@ -310,69 +373,11 @@ document.addEventListener("DOMContentLoaded", () => {
   window.showUserDetails = async (userId) => {
     const interactionColumn = document.querySelector(".interaction-column");
 
+    // Store the current user details state
+    sessionStorage.setItem("currentUserDetails", userId);
+
     try {
-      const response = await fetch(`/api/user/${userId}`);
-      const data = await response.json();
-
-      const userDetailsHtml = `
-        <div class="user-details">
-          <button class="back-button">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <div class="user-details-header">
-            <img src="${
-              data.profilePic || "/assets/default-avatar.png"
-            }" alt="${data.name}" class="user-details-avatar">
-          </div>
-          <div class="user-details-content">
-            <h2>${data.name}</h2>
-            <div class="user-status">
-              ${
-                data.isOnline
-                  ? '<span class="status online">Online</span>'
-                  : `<span class="status">Last seen: ${new Date(
-                      data.lastSeen
-                    ).toLocaleString()}</span>`
-              }
-            </div>
-            <div class="user-details-info">
-              <div class="info-item">
-                <i class="fas fa-envelope"></i>
-                <span>${data.email}</span>
-              </div>
-              <div class="info-item">
-                <i class="fas fa-phone"></i>
-                <span>${data.phone}</span>
-              </div>
-              <div class="info-item">
-                <i class="fas fa-calendar"></i>
-                <span>Joined: ${new Date(
-                  data.createdAt
-                ).toLocaleDateString()}</span>
-              </div>
-            </div>
-            <button class="add-friend-btn-large" onclick="window.sendFriendRequest('${userId}')">
-              <i class="fas fa-user-plus"></i> Add Friend
-            </button>
-          </div>
-        </div>
-      `;
-
-      interactionColumn.innerHTML = userDetailsHtml;
-
-      // Add back button click handler
-      const backButton = interactionColumn.querySelector(".back-button");
-      if (backButton) {
-        backButton.addEventListener("click", hideInteraction);
-        // Initially hide back button on desktop
-        if (window.innerWidth > 768) {
-          backButton.style.display = "none";
-        }
-      }
-
-      if (window.innerWidth <= 768) {
-        showInteraction();
-      }
+      await renderUserDetails(userId, interactionColumn);
     } catch (error) {
       console.error("Error fetching user details:", error);
       interactionColumn.innerHTML = `
@@ -383,6 +388,76 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
   };
+
+  // Add new function to render user details
+  async function renderUserDetails(userId, interactionColumn) {
+    const response = await fetch(`/api/user/${userId}`);
+    const data = await response.json();
+
+    const userDetailsHtml = `
+      <div class="user-details" data-user-id="${userId}">
+        <button class="back-button">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="user-details-header">
+          <div class="user-details-avatar-container">
+            <img src="${
+              data.profilePic || "/assets/default-avatar.png"
+            }" alt="${data.name}" class="user-details-avatar">
+            <div class="user-details-status-indicator ${
+              data.isOnline ? "online" : ""
+            }" 
+                 style="display: ${data.isOnline ? "block" : "none"}"></div>
+          </div>
+        </div>
+        <div class="user-details-content">
+          <h2>${data.name}</h2>
+          <div class="user-status">
+            ${data.isOnline ? '<span class="status online">Online</span>' : ""}
+          </div>
+          <div class="user-details-info">
+            <div class="info-item">
+              <i class="fas fa-envelope"></i>
+              <span>${data.email}</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-phone"></i>
+              <span>${data.phone}</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-calendar"></i>
+              <span>Joined: ${new Date(
+                data.createdAt
+              ).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <button class="add-friend-btn-large" onclick="window.sendFriendRequest('${userId}')">
+            <i class="fas fa-user-plus"></i> Add Friend
+          </button>
+        </div>
+      </div>
+    `;
+
+    interactionColumn.innerHTML = userDetailsHtml;
+
+    // Add back button click handler
+    const backButton = interactionColumn.querySelector(".back-button");
+    if (backButton) {
+      backButton.addEventListener("click", () => {
+        hideInteraction();
+        // Clear the stored user details on back
+        sessionStorage.removeItem("currentUserDetails");
+      });
+
+      if (window.innerWidth > 768) {
+        backButton.style.display = "none";
+      }
+    }
+
+    if (window.innerWidth <= 768) {
+      showInteraction();
+    }
+  }
 
   // Helper function to send friend request
   window.sendFriendRequest = async (userId) => {
@@ -467,9 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => toast.remove(), 3000);
   }
 
-  // Load friends by default
-  fetchAndRenderContent("/api/friends");
-
   // Mobile interaction handling
   const isMobile = window.innerWidth <= 768;
   const interactionColumn = document.querySelector(".interaction-column");
@@ -494,6 +566,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Hide back button
     const backButton = document.querySelector(".back-button");
     if (backButton) backButton.style.display = "none";
+    // Clear stored user details
+    sessionStorage.removeItem("currentUserDetails");
   }
 
   // Add click handlers for user list items (add this when you populate the list)
@@ -523,11 +597,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+  // Check for stored user details after setting active section
+  const storedUserId = sessionStorage.getItem("currentUserDetails");
+  if (storedUserId) {
+    const interactionColumn = document.querySelector(".interaction-column");
+    renderUserDetails(storedUserId, interactionColumn);
+  }
 });
 
-// Add logout functionality
+// Modify logout handler to clear only sessionStorage
 document.querySelector(".logout-btn").addEventListener("click", async () => {
   try {
+    const socket = io();
+    socket.disconnect(); // Disconnect socket
+    sessionStorage.clear();
+
+    // Remove all status indicators before logout
+    const statusIndicators = document.querySelectorAll(".status-indicator");
+    statusIndicators.forEach((indicator) => {
+      indicator.classList.remove("online");
+    });
+
     const response = await fetch("/logout", {
       method: "GET",
       credentials: "include",

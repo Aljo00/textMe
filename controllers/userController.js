@@ -5,6 +5,7 @@ const env = require("dotenv").config();
 const mongoose = require("mongoose");
 const sendmail = require("../helpers/sendEmail");
 const { generateTokens } = require("../config/JWT");
+const socketService = require("../services/socketService");
 
 const userController = {
   // Render login page
@@ -21,6 +22,15 @@ const userController = {
       if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
+
+      // Update online status
+      await User.findByIdAndUpdate(user._id, {
+        isOnline: true,
+      });
+      socketService.getIO().emit("user_status_change", {
+        userId: user._id,
+        isOnline: true,
+      });
 
       const { accessToken, refreshToken } = generateTokens(user);
 
@@ -202,23 +212,39 @@ const userController = {
     }
   },
 
-  logout: (req, res) => {
-    // Clear JWT cookies
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+  logout: async (req, res) => {
+    try {
+      await User.findByIdAndUpdate(req.user.id, {
+        isOnline: false,
+        lastSeen: new Date(),
+      });
 
-    // Clear session if exists
-    if (req.session) {
-      req.session.destroy();
+      socketService.getIO().emit("user_status_change", {
+        userId: req.user.id,
+        isOnline: false,
+        lastSeen: new Date(),
+      });
+
+      // Clear JWT cookies
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+
+      // Clear session if exists
+      if (req.session) {
+        req.session.destroy();
+      }
+
+      // Send success message with redirect
+      req.session = null; // Ensure session is cleared
+      res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+        redirect: "/login",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
-
-    // Send success message with redirect
-    req.session = null; // Ensure session is cleared
-    res.status(200).json({
-      success: true,
-      message: "Logged out successfully",
-      redirect: "/login",
-    });
   },
 
   getDashboard: async (req, res) => {
@@ -269,7 +295,6 @@ const userController = {
       const query = req.query.q;
       const currentUser = await User.findById(req.user.id);
 
-      // Get arrays of IDs to exclude
       const excludeIds = [
         currentUser._id,
         ...(currentUser.friends || []),
@@ -280,13 +305,12 @@ const userController = {
         _id: { $nin: excludeIds },
       };
 
-      // Add name filter only if query exists and is not empty
       if (query && query.trim().length > 0) {
         searchQuery.name = { $regex: query, $options: "i" };
       }
 
       const users = await User.find(searchQuery)
-        .select("name email profilePic isOnline")
+        .select("name email profilePic isOnline lastSeen") // Added lastSeen
         .limit(20);
 
       res.json({ users });

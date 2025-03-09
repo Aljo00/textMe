@@ -69,7 +69,10 @@
         </div>
       </div>
     </div>
-
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      window.currentUserId = "<%= user._id %>";
+    </script>
     <script src="/scripts/dashboard.js"></script>
   </body>
 </html>
