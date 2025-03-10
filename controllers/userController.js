@@ -284,7 +284,8 @@ const userController = {
         "pendingRequests",
         "name profilePic"
       );
-      res.json({ requests: user.pendingRequests });
+      const count = user.pendingRequests.length;
+      res.json({ requests: user.pendingRequests, count });
     } catch (error) {
       res.status(500).json({ message: "Error fetching friend requests" });
     }
@@ -326,13 +327,13 @@ const userController = {
   sendFriendRequest: async (req, res) => {
     try {
       const { userId } = req.body;
+      const fromUser = await User.findById(req.user.id);
       const targetUser = await User.findById(userId);
 
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check if request already exists
       if (targetUser.pendingRequests.includes(req.user.id)) {
         return res.status(400).json({ message: "Friend request already sent" });
       }
@@ -340,6 +341,20 @@ const userController = {
       // Add to pending requests
       targetUser.pendingRequests.push(req.user.id);
       await targetUser.save();
+
+      // Only emit to the target user's socket
+      socketService
+        .getIO()
+        .to(`user_${userId}`)
+        .emit("new_friend_request", {
+          toUserId: userId,
+          fromUser: {
+            id: fromUser._id,
+            name: fromUser.name,
+            profilePic: fromUser.profilePic,
+          },
+          count: targetUser.pendingRequests.length,
+        });
 
       res.json({ success: true, message: "Friend request sent successfully" });
     } catch (error) {
@@ -371,6 +386,13 @@ const userController = {
       }
 
       await currentUser.save();
+
+      // Emit socket event for request count update
+      socketService.getIO().emit("update_request_count", {
+        userId: currentUser._id,
+        count: currentUser.pendingRequests.length,
+      });
+
       res.json({ success: true, message: `Friend request ${action}ed` });
     } catch (error) {
       console.error("Handle friend request error:", error);

@@ -1,11 +1,96 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize Socket.IO
   const socket = io();
 
-  // Connect with user ID
+  // Initialize notification system
   if (window.currentUserId) {
-    socket.emit("user_connected", window.currentUserId);
+    socket.emit("join_user_room", window.currentUserId);
   }
+
+  // Listen for friend requests globally
+  socket.on("new_friend_request", ({ toUserId, fromUser, count }) => {
+    // Only update notification if the current user is the recipient
+    if (window.currentUserId === toUserId) {
+      updateNotificationBadge(count);
+      showToast(`New friend request from ${fromUser.name}`);
+
+      // Update list if on friend requests page
+      if (listHeader && listHeader.textContent === "Friend Requests") {
+        fetchAndRenderContent("/api/friend-requests");
+      }
+    }
+  });
+
+  function updateNotificationBadge(count) {
+    const badge = document.querySelector(".notification-badge");
+    if (!badge) return;
+
+    if (count > 0) {
+      badge.style.display = "flex";
+      badge.textContent = count;
+      // Store count in localStorage for persistence
+      localStorage.setItem("pendingRequestsCount", count);
+    } else {
+      badge.style.display = "none";
+      localStorage.removeItem("pendingRequestsCount");
+    }
+  }
+
+  // Load stored notification count on page load
+  const storedCount = localStorage.getItem("pendingRequestsCount");
+  if (storedCount) {
+    updateNotificationBadge(parseInt(storedCount));
+  }
+
+  // Fetch initial request count
+  fetch("/api/friend-requests")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.count > 0) {
+        updateNotificationBadge(data.count);
+      }
+    });
+
+  // Initialize friend request notifications
+  const friendRequestIcon = document.querySelector(
+    '[data-tooltip="Friend Requests"]'
+  );
+  const notificationBadge = document.createElement("div");
+  notificationBadge.className = "notification-badge";
+  friendRequestIcon.appendChild(notificationBadge);
+
+  // Listen for friend request notifications
+  socket.on("new_friend_request", ({ fromUser, count }) => {
+    updateNotificationBadge(count);
+    showToast(`New friend request from ${fromUser.name}`);
+
+    // Update friend requests list if visible
+    if (listHeader && listHeader.textContent === "Friend Requests") {
+      fetchAndRenderContent("/api/friend-requests");
+    }
+  });
+
+  // Listen for request count updates
+  socket.on("update_request_count", ({ count }) => {
+    updateNotificationBadge(count);
+  });
+
+  function updateNotificationBadge(count) {
+    if (count > 0) {
+      notificationBadge.style.display = "flex";
+      notificationBadge.textContent = count;
+    } else {
+      notificationBadge.style.display = "none";
+    }
+  }
+
+  // Get initial friend request count
+  fetch("/api/friend-requests")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.count > 0) {
+        updateNotificationBadge(data.count);
+      }
+    });
 
   // Listen for user status changes
   socket.on("user_status_change", ({ userId, isOnline, lastSeen }) => {
