@@ -46,6 +46,9 @@
         <div class="icon-nav-item" data-tooltip="Call History">
           <i class="fas fa-phone-alt"></i>
         </div>
+        <div class="icon-nav-item" data-tooltip="Sent Requests">
+          <i class="fas fa-paper-plane"></i>
+        </div>
       </div>
 
       <!-- Second Column - List View -->
@@ -63,6 +66,52 @@
         <button class="back-button">
           <i class="fas fa-arrow-left"></i>
         </button>
+        <div class="chat-container" style="display: none">
+          <div class="chat-header">
+            <div class="chat-user-info">
+              <div class="profile-container">
+                <img src="" alt="" class="user-avatar chat-avatar" />
+                <div class="status-indicator"></div>
+              </div>
+              <div class="chat-user-details">
+                <h4 class="chat-user-name"></h4>
+                <span class="chat-user-status"></span>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <button class="icon-btn" title="Voice Call">
+                <i class="fas fa-phone"></i>
+              </button>
+              <button class="icon-btn" title="Video Call">
+                <i class="fas fa-video"></i>
+              </button>
+              <button class="icon-btn" title="More">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+            </div>
+          </div>
+          <div class="chat-messages">
+            <!-- Messages will be dynamically added here -->
+          </div>
+          <div class="chat-input-area">
+            <button class="icon-btn">
+              <i class="fas fa-paperclip"></i>
+            </button>
+            <div class="message-input-container">
+              <input
+                type="text"
+                placeholder="Type a message..."
+                id="messageInput"
+              />
+              <button class="icon-btn emoji-btn">
+                <i class="far fa-smile"></i>
+              </button>
+            </div>
+            <button class="icon-btn send-btn">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
         <div class="placeholder-message">
           <i class="fas fa-comments"></i>
           <p>Select a chat to start messaging</p>

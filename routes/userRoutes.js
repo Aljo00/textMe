@@ -39,4 +39,11 @@ router.post(
 // Add new route for user details
 router.get("/api/user/:userId", authMiddleware, userController.getUserDetails);
 
+// Add new route for sent requests
+router.get(
+  "/api/sent-requests",
+  authMiddleware,
+  userController.getSentRequests
+);
+
 module.exports = router;

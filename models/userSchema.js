@@ -51,6 +51,13 @@ const userSchema = new mongoose.Schema(
         default: [],
       },
     ],
+    sentRequests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      },
+    ],
     isVerified: {
       type: Boolean,
       default: false,

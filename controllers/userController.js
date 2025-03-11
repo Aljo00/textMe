@@ -291,6 +291,18 @@ const userController = {
     }
   },
 
+  getSentRequests: async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).populate(
+        "sentRequests",
+        "name profilePic isOnline lastSeen"
+      );
+      res.json({ requests: user.sentRequests });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching sent requests" });
+    }
+  },
+
   searchUsers: async (req, res) => {
     try {
       const query = req.query.q;
@@ -338,9 +350,12 @@ const userController = {
         return res.status(400).json({ message: "Friend request already sent" });
       }
 
-      // Add to pending requests
+      // Add to pending requests of target user
       targetUser.pendingRequests.push(req.user.id);
-      await targetUser.save();
+      // Add to sent requests of current user
+      fromUser.sentRequests.push(userId);
+
+      await Promise.all([targetUser.save(), fromUser.save()]);
 
       // Only emit to the target user's socket
       socketService
@@ -367,6 +382,7 @@ const userController = {
     try {
       const { requestId, action } = req.body;
       const currentUser = await User.findById(req.user.id);
+      const requestUser = await User.findById(requestId);
 
       if (!currentUser.pendingRequests.includes(requestId)) {
         return res.status(400).json({ message: "No such friend request" });
@@ -377,15 +393,17 @@ const userController = {
         (id) => id.toString() !== requestId
       );
 
+      // Remove from sent requests of the other user
+      requestUser.sentRequests = requestUser.sentRequests.filter(
+        (id) => id.toString() !== currentUser._id.toString()
+      );
+
       if (action === "accept") {
-        // Add to friends list for both users
         currentUser.friends.push(requestId);
-        const otherUser = await User.findById(requestId);
-        otherUser.friends.push(currentUser._id);
-        await otherUser.save();
+        requestUser.friends.push(currentUser._id);
       }
 
-      await currentUser.save();
+      await Promise.all([currentUser.save(), requestUser.save()]);
 
       // Emit socket event for request count update
       socketService.getIO().emit("update_request_count", {

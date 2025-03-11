@@ -261,6 +261,8 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
           } else {
             data.friends.forEach((friend) => {
+              // Safely stringify friend data for onclick attribute
+              const friendData = encodeURIComponent(JSON.stringify(friend));
               html += `
                 <div class="user-item" data-user-id="${friend._id}">
                   <div class="profile-container">
@@ -274,8 +276,13 @@ document.addEventListener("DOMContentLoaded", () => {
                            friend.isOnline ? "block" : "none"
                          }"></div>
                   </div>
-                  <div class="user-info">
+                  <div class="user-info" onclick="openChat('${friendData}')">
                     <h4>${friend.name}</h4>
+                    <span class="status-text ${
+                      friend.isOnline ? "online" : "offline"
+                    }">
+                      ${friend.isOnline ? "Online" : "Offline"}
+                    </span>
                   </div>
                 </div>
               `;
@@ -294,13 +301,13 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             data.requests.forEach((request) => {
               html += `
-                <div class="request-item">
+                <div class="request-item" data-user-id="${request._id}">
                   <img src="${request.profilePic}" alt="${request.name}" class="user-avatar">
                   <div class="request-info">
                     <h4>${request.name}</h4>
                     <div class="request-actions">
-                      <button class="accept-btn" onclick="handleRequest('${request._id}', 'accept')">Accept</button>
-                      <button class="reject-btn" onclick="handleRequest('${request._id}', 'reject')">Reject</button>
+                      <button class="accept-btn" onclick="window.handleRequest('${request._id}', 'accept')">Accept</button>
+                      <button class="reject-btn" onclick="window.handleRequest('${request._id}', 'reject')">Reject</button>
                     </div>
                   </div>
                 </div>
@@ -346,6 +353,44 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span>${call.duration}</span>
                     <span>${new Date(call.timestamp).toLocaleString()}</span>
                   </div>
+                </div>
+              `;
+            });
+          }
+          break;
+
+        case "/api/sent-requests":
+          if (!data.requests || data.requests.length === 0) {
+            html = `
+              <div class="empty-state">
+                <i class="fas fa-paper-plane"></i>
+                <p>No sent friend requests</p>
+              </div>
+            `;
+          } else {
+            data.requests.forEach((request) => {
+              html += `
+                <div class="user-item" data-user-id="${request._id}">
+                  <div class="profile-container">
+                    <img src="${request.profilePic}" alt="${
+                request.name
+              }" class="user-avatar">
+                    <div class="status-indicator ${
+                      request.isOnline ? "online" : ""
+                    }" 
+                         style="display: ${
+                           request.isOnline ? "block" : "none"
+                         }"></div>
+                  </div>
+                  <div class="user-info">
+                    <h4>${request.name}</h4>
+                    <span class="request-status">Request Pending</span>
+                  </div>
+                  <button class="cancel-request-btn" onclick="cancelRequest('${
+                    request._id
+                  }')">
+                    <i class="fas fa-times"></i>
+                  </button>
                 </div>
               `;
             });
@@ -619,6 +664,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function cancelRequest(userId) {
+    try {
+      const response = await fetch("/api/handle-friend-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: userId, action: "cancel" }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        showToast("Friend request cancelled successfully");
+        fetchAndRenderContent("/api/sent-requests");
+      }
+    } catch (error) {
+      console.error("Error cancelling request:", error);
+      showToast("Failed to cancel request", "error");
+    }
+  }
+
   function showToast(message, type = "success") {
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
@@ -659,10 +723,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function addUserClickHandlers() {
     const userItems = document.querySelectorAll(".user-item");
     userItems.forEach((item) => {
-      item.addEventListener("click", () => {
+      item.addEventListener("click", async () => {
+        const userId = item.dataset.userId;
+        const response = await fetch(`/api/user/${userId}`);
+        const user = await response.json();
+
         if (isMobile) {
           showInteraction();
         }
+
+        showChatInterface(user);
       });
     });
   }
@@ -689,40 +759,301 @@ document.addEventListener("DOMContentLoaded", () => {
     const interactionColumn = document.querySelector(".interaction-column");
     renderUserDetails(storedUserId, interactionColumn);
   }
+
+  // Add logout handler here
+  document.querySelector(".logout-btn").addEventListener("click", async () => {
+    try {
+      socket.disconnect(); // Use the socket instance from the scope
+      sessionStorage.clear();
+
+      const statusIndicators = document.querySelectorAll(".status-indicator");
+      statusIndicators.forEach((indicator) => {
+        indicator.classList.remove("online");
+      });
+
+      const response = await fetch("/logout", {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        const toast = document.createElement("div");
+        toast.className = "toast success";
+        toast.textContent = data.message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+          window.location.href = data.redirect;
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  });
+
+  // Add these functions inside your DOMContentLoaded event listener
+  function showChatInterface(user) {
+    const chatContainer = document.querySelector(".chat-container");
+    const placeholderMessage = document.querySelector(".placeholder-message");
+    const chatAvatar = chatContainer.querySelector(".chat-avatar");
+    const chatUserName = chatContainer.querySelector(".chat-user-name");
+    const chatUserStatus = chatContainer.querySelector(".chat-user-status");
+
+    // Update chat header with user info
+    chatAvatar.src = user.profilePic;
+    chatAvatar.alt = user.name;
+    chatUserName.textContent = user.name;
+    chatUserStatus.textContent = user.isOnline ? "Online" : "Offline";
+
+    // Show chat container and hide placeholder
+    chatContainer.style.display = "flex";
+    placeholderMessage.style.display = "none";
+
+    // Focus on input
+    const messageInput = document.getElementById("messageInput");
+    messageInput.focus();
+
+    // Set up input handlers
+    setupChatInputHandlers();
+  }
+
+  function setupChatInputHandlers() {
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.querySelector(".send-btn");
+
+    messageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && !e.shiftKey && messageInput.value.trim()) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendButton.addEventListener("click", () => {
+      if (messageInput.value.trim()) {
+        sendMessage();
+      }
+    });
+  }
+
+  function sendMessage() {
+    const messageInput = document.getElementById("messageInput");
+    const message = messageInput.value.trim();
+
+    if (!message) return;
+
+    // Add message to UI
+    addMessageToChat({
+      content: message,
+      type: "sent",
+      timestamp: new Date(),
+    });
+
+    // Clear input
+    messageInput.value = "";
+  }
+
+  function addMessageToChat(message) {
+    const chatMessages = document.querySelector(".chat-messages");
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message", message.type);
+
+    messageElement.innerHTML = `
+      <div class="message-content">${message.content}</div>
+      <div class="message-time">${formatMessageTime(message.timestamp)}</div>
+    `;
+
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function formatMessageTime(date) {
+    return new Date(date).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  // Update the user click handler to show chat
+  function addUserClickHandlers() {
+    const userItems = document.querySelectorAll(".user-item");
+    userItems.forEach((item) => {
+      item.addEventListener("click", async () => {
+        const userId = item.dataset.userId;
+        const response = await fetch(`/api/user/${userId}`);
+        const user = await response.json();
+
+        if (isMobile) {
+          showInteraction();
+        }
+
+        showChatInterface(user);
+      });
+    });
+  }
 });
 
-// Modify logout handler to clear only sessionStorage
-document.querySelector(".logout-btn").addEventListener("click", async () => {
+// Move this outside of DOMContentLoaded to make it globally accessible
+window.handleRequest = async function (requestId, action) {
   try {
-    const socket = io();
-    socket.disconnect(); // Disconnect socket
-    sessionStorage.clear();
+    const requestItem = document.querySelector(
+      `.request-item[data-user-id="${requestId}"]`
+    );
+    const buttons = requestItem.querySelectorAll("button");
 
-    // Remove all status indicators before logout
-    const statusIndicators = document.querySelectorAll(".status-indicator");
-    statusIndicators.forEach((indicator) => {
-      indicator.classList.remove("online");
+    // Disable all buttons
+    buttons.forEach((btn) => (btn.disabled = true));
+    requestItem.classList.add("removing");
+
+    const response = await fetch("/api/handle-friend-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, action }),
     });
 
-    const response = await fetch("/logout", {
-      method: "GET",
-      credentials: "include",
-    });
     const data = await response.json();
 
     if (data.success) {
-      // Create and show toast message
-      const toast = document.createElement("div");
-      toast.className = "toast success";
-      toast.textContent = data.message;
-      document.body.appendChild(toast);
-
-      // Redirect after showing message
+      // Wait for animation to complete
       setTimeout(() => {
-        window.location.href = data.redirect;
-      }, 1000);
+        requestItem.remove();
+
+        // Update the interface if no more requests
+        const remainingRequests = document.querySelectorAll(".request-item");
+        if (remainingRequests.length === 0) {
+          document.querySelector(".list-content").innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-envelope-open"></i>
+              <p>No pending friend requests</p>
+            </div>
+          `;
+        }
+
+        // Show success message
+        showToast(`Friend request ${action}ed successfully`);
+      }, 300);
+    } else {
+      // Re-enable buttons if failed
+      buttons.forEach((btn) => (btn.disabled = false));
+      requestItem.classList.remove("removing");
+      showToast(data.message || "Failed to handle request", "error");
     }
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error("Error handling request:", error);
+    showToast(`Failed to ${action} friend request`, "error");
   }
-});
+};
+
+// Add this new function to global scope
+window.openChat = (encodedFriendData) => {
+  try {
+    const user = JSON.parse(decodeURIComponent(encodedFriendData));
+    const interactionColumn = document.querySelector(".interaction-column");
+    const chatContainer = document.querySelector(".chat-container");
+    const placeholderMessage = document.querySelector(".placeholder-message");
+    const chatAvatar = chatContainer.querySelector(".chat-avatar");
+    const chatUserName = chatContainer.querySelector(".chat-user-name");
+    const chatUserStatus = chatContainer.querySelector(".chat-user-status");
+    const backButton = interactionColumn.querySelector(".back-button");
+
+    // Update chat header with user info
+    chatAvatar.src = user.profilePic || "/assets/default-avatar.png";
+    chatAvatar.alt = user.name;
+    chatUserName.textContent = user.name;
+    chatUserStatus.textContent = user.isOnline ? "Online" : "Offline";
+
+    // Show chat container and hide placeholder
+    chatContainer.style.display = "flex";
+    placeholderMessage.style.display = "none";
+
+    // Set up chat input handlers if not already set
+    setupChatInputHandlers();
+
+    // Show mobile view if needed
+    if (window.innerWidth <= 768) {
+      showInteraction();
+    }
+
+    // Add back button functionality
+    if (backButton) {
+      backButton.onclick = () => {
+        chatContainer.style.display = "none";
+        placeholderMessage.style.display = "flex";
+        if (window.innerWidth <= 768) {
+          hideInteraction();
+        }
+      };
+    }
+  } catch (error) {
+    console.error("Error opening chat:", error);
+    showToast("Error opening chat", "error");
+  }
+};
+
+function setupChatInputHandlers() {
+  const messageInput = document.getElementById("messageInput");
+  const sendButton = document.querySelector(".send-btn");
+
+  // Remove existing listeners if any
+  messageInput.removeEventListener("keypress", handleKeyPress);
+  sendButton.removeEventListener("click", handleSendClick);
+
+  // Add new listeners
+  messageInput.addEventListener("keypress", handleKeyPress);
+  sendButton.addEventListener("click", handleSendClick);
+
+  // Focus on input
+  messageInput.focus();
+}
+
+function handleKeyPress(e) {
+  if (e.key === "Enter" && !e.shiftKey && e.target.value.trim()) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function handleSendClick() {
+  const messageInput = document.getElementById("messageInput");
+  if (messageInput.value.trim()) {
+    sendMessage();
+  }
+}
+
+function sendMessage() {
+  const messageInput = document.getElementById("messageInput");
+  const message = messageInput.value.trim();
+
+  if (!message) return;
+
+  // Add message to UI
+  addMessageToChat({
+    content: message,
+    type: "sent",
+    timestamp: new Date(),
+  });
+
+  // Clear input
+  messageInput.value = "";
+}
+
+function addMessageToChat(message) {
+  const chatMessages = document.querySelector(".chat-messages");
+  const messageElement = document.createElement("div");
+  messageElement.classList.add("message", message.type);
+
+  messageElement.innerHTML = `
+    <div class="message-content">${message.content}</div>
+    <div class="message-time">${formatMessageTime(message.timestamp)}</div>
+  `;
+
+  chatMessages.appendChild(messageElement);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function formatMessageTime(date) {
+  return new Date(date).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
