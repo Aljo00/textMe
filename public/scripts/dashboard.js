@@ -261,10 +261,11 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
           } else {
             data.friends.forEach((friend) => {
-              // Safely stringify friend data for onclick attribute
               const friendData = encodeURIComponent(JSON.stringify(friend));
               html += `
-                <div class="user-item" data-user-id="${friend._id}">
+                <div class="user-item" data-user-id="${
+                  friend._id
+                }" onclick="openChat('${friendData}')">
                   <div class="profile-container">
                     <img src="${friend.profilePic}" alt="${
                 friend.name
@@ -276,13 +277,8 @@ document.addEventListener("DOMContentLoaded", () => {
                            friend.isOnline ? "block" : "none"
                          }"></div>
                   </div>
-                  <div class="user-info" onclick="openChat('${friendData}')">
+                  <div class="user-info">
                     <h4>${friend.name}</h4>
-                    <span class="status-text ${
-                      friend.isOnline ? "online" : "offline"
-                    }">
-                      ${friend.isOnline ? "Online" : "Offline"}
-                    </span>
                   </div>
                 </div>
               `;
@@ -947,6 +943,11 @@ window.handleRequest = async function (requestId, action) {
 // Add this new function to global scope
 window.openChat = (encodedFriendData) => {
   try {
+    // Remove active class from all user items
+    document.querySelectorAll(".user-item").forEach((item) => {
+      item.classList.remove("active");
+    });
+
     const user = JSON.parse(decodeURIComponent(encodedFriendData));
     const interactionColumn = document.querySelector(".interaction-column");
     const chatContainer = document.querySelector(".chat-container");
@@ -955,6 +956,12 @@ window.openChat = (encodedFriendData) => {
     const chatUserName = chatContainer.querySelector(".chat-user-name");
     const chatUserStatus = chatContainer.querySelector(".chat-user-status");
     const backButton = interactionColumn.querySelector(".back-button");
+
+    // Add active class to clicked user item
+    const userItem = document.querySelector(`[data-user-id="${user._id}"]`);
+    if (userItem) {
+      userItem.classList.add("active");
+    }
 
     // Update chat header with user info
     chatAvatar.src = user.profilePic || "/assets/default-avatar.png";
@@ -979,6 +986,10 @@ window.openChat = (encodedFriendData) => {
       backButton.onclick = () => {
         chatContainer.style.display = "none";
         placeholderMessage.style.display = "flex";
+        // Remove active class when closing chat
+        document.querySelectorAll(".user-item").forEach((item) => {
+          item.classList.remove("active");
+        });
         if (window.innerWidth <= 768) {
           hideInteraction();
         }
