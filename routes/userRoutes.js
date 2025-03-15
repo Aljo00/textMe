@@ -11,6 +11,7 @@ router.post("/signup", guestMiddleware, userController.signup);
 router.get("/verify-otp", guestMiddleware, userController.getOtpPage);
 router.post("/verify-otp", guestMiddleware, userController.verifyOtp);
 router.post("/resend-otp", guestMiddleware, userController.resendOtp);
+router.post("/google-signup", guestMiddleware, userController.googleSignup);
 
 // Protected routes (accessible only when logged in)
 router.get("/dashboard", authMiddleware, userController.getDashboard);

@@ -6,11 +6,16 @@ const mongoose = require("mongoose");
 const sendmail = require("../helpers/sendEmail");
 const { generateTokens } = require("../config/JWT");
 const socketService = require("../services/socketService");
+const admin = require("../config/firebase");
 
 const userController = {
   // Render login page
   getLoginPage: (req, res) => {
-    res.render("loginPage");
+    res.render("loginPage", {
+      firebaseApiKey: process.env.FIREBASE_API_KEY,
+      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+    });
   },
 
   // Handle user login
@@ -455,6 +460,61 @@ const userController = {
     } catch (error) {
       console.error("Error fetching user details:", error);
       res.status(500).json({ message: "Error fetching user details" });
+    }
+  },
+
+  googleSignup: async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).json({ message: "No ID token provided" });
+      }
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const email = decoded.email;
+      let user = await User.findOne({ email });
+
+      if (!user) {
+        const randomPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await require("bcrypt").hash(randomPassword, 10);
+        // If no profilePic in decoded, do not send the field so that the default is applied
+        user = new User({
+          name: decoded.name,
+          email,
+          password: hashedPassword,
+          phone: "0000000000", // dummy phone for google users
+          dob: new Date("2000-01-01"), // dummy DOB
+          ...(decoded.picture ? { profilePic: decoded.picture } : {}), // add picture only if available
+          isVerified: true,
+        });
+        await user.save();
+      }
+
+      // Update online status
+      await User.findByIdAndUpdate(user._id, { isOnline: true });
+      // Generate JWT tokens
+      const { generateTokens } = require("../config/JWT");
+      const { accessToken, refreshToken } = generateTokens(user);
+      // Set tokens in cookies
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 2 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+      res.status(200).json({
+        success: true,
+        message: "Google signup successful",
+        redirect: "/dashboard",
+      });
+    } catch (error) {
+      console.error("Google signup error:", error);
+      return res.status(500).json({ message: "Internal server error" });
     }
   },
 };
