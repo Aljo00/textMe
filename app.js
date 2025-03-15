@@ -45,16 +45,6 @@ app.use(express.static("public"));
 const db = require("./config/db");
 db.connectDB();
 
-// To check if collections are empty
-const checkDatabase = async () => {
-  try {
-    const count = await User.countDocuments();
-    console.log(`Current users in database: ${count}`);
-  } catch (error) {
-    console.error("Error checking database:", error);
-  }
-};
-
 checkDatabase();
 
 app.use("/", user_route);
